@@ -9,10 +9,18 @@ import (
 type MockPricingService struct{}
 
 func (m *MockPricingService) GetPrice(sku string) (int, error) {
-	if sku == "A" {
+	switch sku {
+	case "A":
 		return 50, nil
+	case "B":
+		return 30, nil
+	case "C":
+		return 20, nil
+	case "D":
+		return 15, nil
+	default:
+		return 0, nil
 	}
-	return 0, nil
 }
 
 // pricing service that simulates an error
@@ -117,6 +125,36 @@ func TestGetTotalPrice_MultipleItems(t *testing.T) {
 			name:     "multiple item A",
 			items:    []string{"A", "A", "A"},
 			expected: 150,
+		},
+		{
+			name:     "multiple random items",
+			items:    []string{"A", "B", "C", "A", "B", "A", "D"},
+			expected: 245,
+		},
+		{
+			name:     "multiple item D",
+			items:    []string{"D", "D", "D", "D"},
+			expected: 60,
+		},
+		{
+			name:     "multiple item C",
+			items:    []string{"C", "C", "C"},
+			expected: 60,
+		},
+		{
+			name:     "multiple B items",
+			items:    []string{"B", "B", "B", "B"},
+			expected: 120,
+		},
+		{
+			name:     "many mixed items",
+			items:    []string{"A", "B", "C", "D", "A", "B", "C", "D", "A", "D", "C", "B"},
+			expected: 345,
+		},
+		{
+			name:     "unknown item",
+			items:    []string{"X"},
+			expected: 0,
 		},
 	}
 
