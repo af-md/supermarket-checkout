@@ -1,10 +1,17 @@
 package checkout
 
-import "errors"
+import (
+	"errors"
+	"supermarket-checkout/pricing"
+)
 
 const (
+	// SKU related error messages
 	EmptySKUError      = "SKU cannot be empty"
 	WhitespaceSKUError = "SKU cannot have whitespace"
+
+	// Generate price related error messages
+	NoItemsError = "no items scanned, checkout empty"
 )
 
 type ICheckout interface {
@@ -13,16 +20,14 @@ type ICheckout interface {
 }
 
 type checkout struct {
-	items []string
+	items          []string
+	pricingService pricing.IPricingService
 }
 
-type item struct {
-	SKU string
-}
-
-func NewCheckout() *checkout {
+func NewCheckout(pricingService pricing.IPricingService) *checkout {
 	return &checkout{
-		items: make([]string, 0),
+		items:          make([]string, 0),
+		pricingService: pricingService,
 	}
 }
 
@@ -41,5 +46,14 @@ func (c *checkout) Scan(SKU string) error {
 }
 
 func (c *checkout) GetTotalPrice() (int, error) {
-	panic("not implemented")
+	if len(c.items) == 0 {
+		return 0, errors.New(NoItemsError)
+	}
+
+	totalPrice, err := c.pricingService.GetPrice(c.items[0])
+	if err != nil {
+		return 0, err
+	}
+
+	return totalPrice, nil
 }

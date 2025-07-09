@@ -1,13 +1,22 @@
 package checkout
 
-import "testing"
+import (
+	"testing"
+)
+
+type MockPricingService struct{}
+
+func (m *MockPricingService) GetPrice(sku string) (int, error) {
+	if sku == "A" {
+		return 50, nil
+	}
+	return 0, nil
+}
 
 func TestScanItem(t *testing.T) {
-	checkout := NewCheckout()
+	checkout := NewCheckout(&MockPricingService{})
 
-	item := item{SKU: "A"}
-
-	err := checkout.Scan(item.SKU)
+	err := checkout.Scan("A")
 
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)
@@ -23,7 +32,7 @@ func TestScanItem(t *testing.T) {
 }
 
 // Negative edge cases tests for Scan method
-func TestScanEdgeCases(t *testing.T) {
+func TestScan_EdgeCases(t *testing.T) {
 	tests := []struct {
 		name     string
 		sku      string
@@ -44,7 +53,7 @@ func TestScanEdgeCases(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			checkout := NewCheckout()
+			checkout := NewCheckout(&MockPricingService{})
 
 			err := checkout.Scan(tt.sku)
 
@@ -54,5 +63,37 @@ func TestScanEdgeCases(t *testing.T) {
 				t.Errorf("Expected error message '%s', got '%s'", tt.errorMsg, err.Error())
 			}
 		})
+	}
+}
+
+func TestGetTotalPrice_SingleItem(t *testing.T) {
+	checkout := NewCheckout(&MockPricingService{})
+
+	err := checkout.Scan("A")
+	if err != nil {
+		t.Fatalf("Failed to scan item: %v", err)
+	}
+
+	total, err := checkout.GetTotalPrice()
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+
+	expected := 50
+	if total != expected {
+		t.Errorf("Expected total %d, got %d", expected, total)
+	}
+}
+
+func TestGetTotalPrice_EmptyCheckout(t *testing.T) {
+	checkout := NewCheckout(&MockPricingService{})
+
+	total, err := checkout.GetTotalPrice()
+	if err == nil {
+		t.Error("Expected error for empty checkout, got nil")
+	}
+
+	if total != 0 {
+		t.Errorf("Expected total 0 for empty checkout, got %d", total)
 	}
 }
