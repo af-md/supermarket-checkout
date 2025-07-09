@@ -1,6 +1,8 @@
 package checkout
 
 import (
+	"errors"
+	"supermarket-checkout/pricing"
 	"testing"
 )
 
@@ -11,6 +13,13 @@ func (m *MockPricingService) GetPrice(sku string) (int, error) {
 		return 50, nil
 	}
 	return 0, nil
+}
+
+// pricing service that simulates an error
+type MockPricingServiceError struct{}
+
+func (m *MockPricingServiceError) GetPrice(sku string) (int, error) {
+	return 0, errors.New("pricing service error")
 }
 
 func TestScanItem(t *testing.T) {
@@ -95,5 +104,78 @@ func TestGetTotalPrice_EmptyCheckout(t *testing.T) {
 
 	if total != 0 {
 		t.Errorf("Expected total 0 for empty checkout, got %d", total)
+	}
+}
+
+func TestGetTotalPrice_MultipleItems(t *testing.T) {
+	tests := []struct {
+		name     string
+		items    []string
+		expected int
+	}{
+		{
+			name:     "multiple item A",
+			items:    []string{"A", "A", "A"},
+			expected: 150,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			checkout := NewCheckout(&MockPricingService{})
+
+			for _, item := range tt.items {
+				err := checkout.Scan(item)
+				if err != nil {
+					t.Fatalf("Failed to scan item %s: %v", item, err)
+				}
+			}
+
+			total, err := checkout.GetTotalPrice()
+			if err != nil {
+				t.Errorf("Expected no error, got %v", err)
+			}
+
+			if total != tt.expected {
+				t.Errorf("Expected total %d, got %d", tt.expected, total)
+			}
+		})
+	}
+}
+
+func TestGetTotalPrice_ErrorInPricingService(t *testing.T) {
+	// shoould be table test
+	tests := []struct {
+		name               string
+		items              []string
+		pricingServiceMock pricing.IPricingService
+	}{
+		{
+			name:               "error in pricing service",
+			items:              []string{"A", "A", "A"},
+			pricingServiceMock: &MockPricingServiceError{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			checkout := NewCheckout(tt.pricingServiceMock)
+
+			for _, item := range tt.items {
+				err := checkout.Scan(item)
+				if err != nil {
+					t.Fatalf("Failed to scan item %s: %v", item, err)
+				}
+			}
+
+			total, err := checkout.GetTotalPrice()
+			if err == nil {
+				t.Error("Expected error from pricing service, got nil")
+			}
+
+			if total != 0 {
+				t.Errorf("Expected total 0 due to pricing service error, got %d", total)
+			}
+		})
 	}
 }

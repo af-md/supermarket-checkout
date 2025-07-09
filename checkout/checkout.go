@@ -2,6 +2,7 @@ package checkout
 
 import (
 	"errors"
+	"fmt"
 	"supermarket-checkout/pricing"
 )
 
@@ -50,9 +51,13 @@ func (c *checkout) GetTotalPrice() (int, error) {
 		return 0, errors.New(NoItemsError)
 	}
 
-	totalPrice, err := c.pricingService.GetPrice(c.items[0])
-	if err != nil {
-		return 0, err
+	totalPrice := 0
+	for _, item := range c.items {
+		itemPrice, err := c.pricingService.GetPrice(item)
+		if err != nil {
+			return 0, fmt.Errorf("error occurred when getting price for item: %s. Error found %s", item, err.Error())
+		}
+		totalPrice += itemPrice
 	}
 
 	return totalPrice, nil
