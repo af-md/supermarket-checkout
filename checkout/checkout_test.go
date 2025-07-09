@@ -8,26 +8,21 @@ import (
 
 type MockPricingService struct{}
 
-func (m *MockPricingService) GetPrice(sku string) (int, error) {
-	switch sku {
-	case "A":
-		return 50, nil
-	case "B":
-		return 30, nil
-	case "C":
-		return 20, nil
-	case "D":
-		return 15, nil
-	default:
-		return 0, nil
-	}
+func (m *MockPricingService) GetPricingScheme() (pricing.PricingScheme, error) {
+
+	return pricing.PricingScheme{
+		Items: map[string]pricing.PricedItem{
+			"A": {Price: 50, DiscountThreshold: 3, DiscountPrice: 130},
+			"B": {Price: 30, DiscountThreshold: 2, DiscountPrice: 45},
+		},
+	}, nil
 }
 
 // pricing service that simulates an error
 type MockPricingServiceError struct{}
 
-func (m *MockPricingServiceError) GetPrice(sku string) (int, error) {
-	return 0, errors.New("pricing service error")
+func (m *MockPricingServiceError) GetPricingScheme() (pricing.PricingScheme, error) {
+	return pricing.PricingScheme{}, errors.New("pricing service error")
 }
 
 func TestScanItem(t *testing.T) {
@@ -43,9 +38,10 @@ func TestScanItem(t *testing.T) {
 		t.Errorf("Expected 1 item, got %d", len(checkout.items))
 	}
 
-	if checkout.items[0] != "A" {
-		t.Errorf("Expected item 'A', got %s", checkout.items[0])
+	if checkout.items["A"] != 1 {
+		t.Errorf("Expected item 'A' value to be 1, got %d", checkout.items["A"])
 	}
+
 }
 
 // Negative edge cases tests for Scan method
@@ -115,6 +111,7 @@ func TestGetTotalPrice_EmptyCheckout(t *testing.T) {
 	}
 }
 
+// no discounts
 func TestGetTotalPrice_MultipleItems(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -216,4 +213,56 @@ func TestGetTotalPrice_ErrorInPricingService(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestGetTotalPrice_MultipleItemsDiscountApplied(t *testing.T) {
+
+	tests := []struct {
+		name               string
+		items              []string
+		pricingServiceMock pricing.IPricingService
+		expected           int
+	}{
+		{
+			name:               "2 Bs for 45",
+			items:              []string{"B", "B"},
+			pricingServiceMock: &MockPricingService{},
+			expected:           45,
+		},
+		{
+			name:               "2 Bs for 45 plus 1 B for 30",
+			items:              []string{"B", "B", "B"},
+			pricingServiceMock: &MockPricingService{},
+			expected:           75,
+		},
+		{
+			name:               "11 Bs for 120",
+			items:              []string{"B", "B", "B", "B", "B", "B", "B", "B", "B", "B", "B"},
+			pricingServiceMock: &MockPricingService{},
+			expected:           255,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			checkout := NewCheckout(tt.pricingServiceMock)
+
+			for _, item := range tt.items {
+				err := checkout.Scan(item)
+				if err != nil {
+					t.Fatalf("Failed to scan item %s: %v", item, err)
+				}
+			}
+
+			total, err := checkout.GetTotalPrice()
+			if err != nil {
+				t.Errorf("Expected no error, got %v", err)
+			}
+
+			if total != tt.expected {
+				t.Errorf("Expected total %d, got %d", tt.expected, total)
+			}
+		})
+	}
+
 }

@@ -1,6 +1,15 @@
 package pricing
 
-
 type IPricingService interface {
-	GetPrice(Sku string) (int, error)
+	GetPricingScheme() (PricingScheme, error)
+}
+
+type PricedItem struct {
+	Price             int
+	DiscountThreshold int
+	DiscountPrice     int
+}
+
+type PricingScheme struct {
+	Items map[string]PricedItem
 }

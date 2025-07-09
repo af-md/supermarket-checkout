@@ -21,13 +21,13 @@ type ICheckout interface {
 }
 
 type checkout struct {
-	items          []string
+	items          map[string]int
 	pricingService pricing.IPricingService
 }
 
 func NewCheckout(pricingService pricing.IPricingService) *checkout {
 	return &checkout{
-		items:          make([]string, 0),
+		items:          make(map[string]int),
 		pricingService: pricingService,
 	}
 }
@@ -42,7 +42,7 @@ func (c *checkout) Scan(SKU string) error {
 		return errors.New(WhitespaceSKUError)
 	}
 
-	c.items = append(c.items, SKU)
+	c.items[SKU] = c.items[SKU] + 1
 	return nil
 }
 
@@ -51,13 +51,28 @@ func (c *checkout) GetTotalPrice() (int, error) {
 		return 0, errors.New(NoItemsError)
 	}
 
+	pricingScheme, err := c.pricingService.GetPricingScheme()
+	if err != nil {
+		return 0, fmt.Errorf("error occurred when getting pricing scheme. Error found %s", err.Error())
+	}
+
 	totalPrice := 0
-	for _, item := range c.items {
-		itemPrice, err := c.pricingService.GetPrice(item)
-		if err != nil {
-			return 0, fmt.Errorf("error occurred when getting price for item: %s. Error found %s", item, err.Error())
-		}
-		totalPrice += itemPrice
+	itemBScheme, ok := pricingScheme.Items["B"]
+	if !ok {
+		return 0, fmt.Errorf("pricing scheme does not contain item B")
+	}
+
+	if c.items["B"] >= itemBScheme.DiscountThreshold {
+
+		remainingItems := c.items["B"] % itemBScheme.DiscountThreshold
+		discountedItems := c.items["B"] - remainingItems
+		totalPrice += (discountedItems / itemBScheme.DiscountThreshold) * itemBScheme.DiscountPrice
+
+		c.items["B"] -= discountedItems
+	}
+
+	if c.items["B"] < itemBScheme.DiscountThreshold && c.items["B"] > 0 {
+		totalPrice += c.items["B"] * itemBScheme.Price
 	}
 
 	return totalPrice, nil
