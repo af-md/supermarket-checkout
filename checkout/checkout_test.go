@@ -12,8 +12,10 @@ func (m *MockPricingService) GetPricingScheme() (pricing.PricingScheme, error) {
 
 	return pricing.PricingScheme{
 		Items: map[string]pricing.PricedItem{
-			"A": {Price: 50, DiscountThreshold: 3, DiscountPrice: 130},
-			"B": {Price: 30, DiscountThreshold: 2, DiscountPrice: 45},
+			"A": {Price: 50, DiscountThreshold: 3, DiscountPrice: 130, DiscountEnabled: true},
+			"B": {Price: 30, DiscountThreshold: 2, DiscountPrice: 45, DiscountEnabled: true},
+			"C": {Price: 20},
+			"D": {Price: 15},
 		},
 	}, nil
 }
@@ -111,74 +113,8 @@ func TestGetTotalPrice_EmptyCheckout(t *testing.T) {
 	}
 }
 
-// no discounts
-func TestGetTotalPrice_MultipleItems(t *testing.T) {
-	tests := []struct {
-		name     string
-		items    []string
-		expected int
-	}{
-		{
-			name:     "multiple item A",
-			items:    []string{"A", "A", "A"},
-			expected: 150,
-		},
-		{
-			name:     "multiple random items",
-			items:    []string{"A", "B", "C", "A", "B", "A", "D"},
-			expected: 245,
-		},
-		{
-			name:     "multiple item D",
-			items:    []string{"D", "D", "D", "D"},
-			expected: 60,
-		},
-		{
-			name:     "multiple item C",
-			items:    []string{"C", "C", "C"},
-			expected: 60,
-		},
-		{
-			name:     "multiple B items",
-			items:    []string{"B", "B", "B", "B"},
-			expected: 120,
-		},
-		{
-			name:     "many mixed items",
-			items:    []string{"A", "B", "C", "D", "A", "B", "C", "D", "A", "D", "C", "B"},
-			expected: 345,
-		},
-		{
-			name:     "unknown item",
-			items:    []string{"X"},
-			expected: 0,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			checkout := NewCheckout(&MockPricingService{})
-
-			for _, item := range tt.items {
-				err := checkout.Scan(item)
-				if err != nil {
-					t.Fatalf("Failed to scan item %s: %v", item, err)
-				}
-			}
-
-			total, err := checkout.GetTotalPrice()
-			if err != nil {
-				t.Errorf("Expected no error, got %v", err)
-			}
-
-			if total != tt.expected {
-				t.Errorf("Expected total %d, got %d", tt.expected, total)
-			}
-		})
-	}
-}
-
-func TestGetTotalPrice_ErrorInPricingService(t *testing.T) {
+// negative tests
+func TestGetTotalPrice_Error(t *testing.T) {
 	// shoould be table test
 	tests := []struct {
 		name               string
@@ -188,6 +124,11 @@ func TestGetTotalPrice_ErrorInPricingService(t *testing.T) {
 		{
 			name:               "error in pricing service",
 			items:              []string{"A", "A", "A"},
+			pricingServiceMock: &MockPricingServiceError{},
+		},
+		{
+			name:               "sku not found in pricing scheme",
+			items:              []string{"X"},
 			pricingServiceMock: &MockPricingServiceError{},
 		},
 	}
@@ -258,6 +199,18 @@ func TestGetTotalPrice_MultipleItemsDiscountApplied(t *testing.T) {
 			items:              []string{"A", "A", "A", "A", "A", "B", "B", "B", "B", "B"},
 			pricingServiceMock: &MockPricingService{},
 			expected:           350,
+		},
+		{
+			name:               "all mixed items with discounts",
+			items:              []string{"A", "B", "C", "D", "A", "B", "C", "D", "A", "D", "C", "B"},
+			pricingServiceMock: &MockPricingService{},
+			expected:           310,
+		},
+		{
+			name:               "without discounted skus",
+			items:              []string{"C", "C", "C", "D", "D", "D"},
+			pricingServiceMock: &MockPricingService{},
+			expected:           105,
 		},
 	}
 

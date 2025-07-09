@@ -8,6 +8,7 @@ type PricedItem struct {
 	Price             int
 	DiscountThreshold int
 	DiscountPrice     int
+	DiscountEnabled   bool
 }
 
 type PricingScheme struct {

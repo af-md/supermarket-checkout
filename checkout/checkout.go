@@ -12,7 +12,9 @@ const (
 	WhitespaceSKUError = "SKU cannot have whitespace"
 
 	// Generate price related error messages
-	NoItemsError = "no items scanned, checkout empty"
+	NoItemsError      = "no items scanned, checkout empty"
+	PriceSchemeError  = "error occurred when getting pricing scheme. Error found %s"
+	ItemNotFoundError = "item %s not found in pricing scheme"
 )
 
 type ICheckout interface {
@@ -53,7 +55,7 @@ func (c *checkout) GetTotalPrice() (int, error) {
 
 	pricingScheme, err := c.pricingService.GetPricingScheme()
 	if err != nil {
-		return 0, fmt.Errorf("error occurred when getting pricing scheme. Error found %s", err.Error())
+		return 0, fmt.Errorf(PriceSchemeError, err.Error())
 	}
 
 	totalPrice := 0
@@ -61,10 +63,11 @@ func (c *checkout) GetTotalPrice() (int, error) {
 	for sku, quantity := range c.items {
 		pricingRules, ok := pricingScheme.Items[sku]
 		if !ok {
-			return 0, fmt.Errorf("item %s not found in pricing scheme", sku)
+			fmt.Printf(ItemNotFoundError, sku)
+			continue
 		}
 
-		if quantity >= pricingRules.DiscountThreshold {
+		if quantity >= pricingRules.DiscountThreshold && pricingRules.DiscountEnabled {
 			discountGroups := quantity / pricingRules.DiscountThreshold
 			itemsAfterDiscount := quantity % pricingRules.DiscountThreshold
 
