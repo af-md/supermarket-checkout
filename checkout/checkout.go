@@ -22,19 +22,19 @@ type ICheckout interface {
 	GetTotalPrice() (totalPrice int, err error)
 }
 
-type checkout struct {
+type Checkout struct {
 	items          map[string]int
 	pricingService pricing.IPricingService
 }
 
-func NewCheckout(pricingService pricing.IPricingService) *checkout {
-	return &checkout{
+func NewCheckout(pricingService pricing.IPricingService) *Checkout {
+	return &Checkout{
 		items:          make(map[string]int),
 		pricingService: pricingService,
 	}
 }
 
-func (c *checkout) Scan(SKU string) error {
+func (c *Checkout) Scan(SKU string) error {
 	// could have trimmed the whitespace here, but I wanted to show how I would handle multiple edge cases
 	if SKU == "" {
 		return errors.New(EmptySKUError)
@@ -48,7 +48,7 @@ func (c *checkout) Scan(SKU string) error {
 	return nil
 }
 
-func (c *checkout) GetTotalPrice() (int, error) {
+func (c *Checkout) GetTotalPrice() (int, error) {
 	if len(c.items) == 0 {
 		return 0, errors.New(NoItemsError)
 	}
@@ -58,6 +58,10 @@ func (c *checkout) GetTotalPrice() (int, error) {
 		return 0, fmt.Errorf(PriceSchemeError, err.Error())
 	}
 
+	return c.CalculateTotalPrice(pricingScheme)
+}
+
+func (c *Checkout) CalculateTotalPrice(pricingScheme pricing.PricingScheme) (int, error) {
 	totalPrice := 0
 
 	for sku, quantity := range c.items {

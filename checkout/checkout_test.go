@@ -9,7 +9,6 @@ import (
 type MockPricingService struct{}
 
 func (m *MockPricingService) GetPricingScheme() (pricing.PricingScheme, error) {
-
 	return pricing.PricingScheme{
 		Items: map[string]pricing.PricedItem{
 			"A": {Price: 50, DiscountThreshold: 3, DiscountPrice: 130, DiscountEnabled: true},
@@ -83,6 +82,7 @@ func TestScan_EdgeCases(t *testing.T) {
 
 func TestGetTotalPrice_SingleItem(t *testing.T) {
 	checkout := NewCheckout(&MockPricingService{})
+	expected := 50
 
 	err := checkout.Scan("A")
 	if err != nil {
@@ -94,7 +94,6 @@ func TestGetTotalPrice_SingleItem(t *testing.T) {
 		t.Errorf("Expected no error, got %v", err)
 	}
 
-	expected := 50
 	if total != expected {
 		t.Errorf("Expected total %d, got %d", expected, total)
 	}
