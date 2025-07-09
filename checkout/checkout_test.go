@@ -241,6 +241,24 @@ func TestGetTotalPrice_MultipleItemsDiscountApplied(t *testing.T) {
 			pricingServiceMock: &MockPricingService{},
 			expected:           255,
 		},
+		{
+			name:               "3 As for 130",
+			items:              []string{"A", "A", "A"},
+			pricingServiceMock: &MockPricingService{},
+			expected:           130,
+		},
+		{
+			name:               "3 As for 130 + 1 A for 50",
+			items:              []string{"A", "A", "A", "A"},
+			pricingServiceMock: &MockPricingService{},
+			expected:           180,
+		},
+		{
+			name:               "5 As, 5Bs",
+			items:              []string{"A", "A", "A", "A", "A", "B", "B", "B", "B", "B"},
+			pricingServiceMock: &MockPricingService{},
+			expected:           350,
+		},
 	}
 
 	for _, tt := range tests {

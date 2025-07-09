@@ -57,22 +57,24 @@ func (c *checkout) GetTotalPrice() (int, error) {
 	}
 
 	totalPrice := 0
-	itemBScheme, ok := pricingScheme.Items["B"]
-	if !ok {
-		return 0, fmt.Errorf("pricing scheme does not contain item B")
-	}
 
-	if c.items["B"] >= itemBScheme.DiscountThreshold {
+	for sku, quantity := range c.items {
+		pricingRules, ok := pricingScheme.Items[sku]
+		if !ok {
+			return 0, fmt.Errorf("item %s not found in pricing scheme", sku)
+		}
 
-		remainingItems := c.items["B"] % itemBScheme.DiscountThreshold
-		discountedItems := c.items["B"] - remainingItems
-		totalPrice += (discountedItems / itemBScheme.DiscountThreshold) * itemBScheme.DiscountPrice
+		if quantity >= pricingRules.DiscountThreshold {
+			remainingItems := quantity % pricingRules.DiscountThreshold
+			discountedItems := quantity - remainingItems
+			totalPrice += (discountedItems / pricingRules.DiscountThreshold) * pricingRules.DiscountPrice
 
-		c.items["B"] -= discountedItems
-	}
+			quantity -= discountedItems
+		}
 
-	if c.items["B"] < itemBScheme.DiscountThreshold && c.items["B"] > 0 {
-		totalPrice += c.items["B"] * itemBScheme.Price
+		if quantity < pricingRules.DiscountThreshold && quantity > 0 {
+			totalPrice += quantity * pricingRules.Price
+		}
 	}
 
 	return totalPrice, nil
