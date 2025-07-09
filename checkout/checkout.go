@@ -5,20 +5,25 @@ type ICheckout interface {
 	GetTotalPrice() (totalPrice int, err error)
 }
 
-type Checkout struct {
+type checkout struct {
 	items []string
 }
 
-func NewCheckout() *Checkout {
-	return &Checkout{
+type item struct {
+	SKU string
+}
+
+func NewCheckout() *checkout {
+	return &checkout{
 		items: make([]string, 0),
 	}
 }
 
-func (c *Checkout) Scan(SKU string) error {
-	panic("not implemented")
+func (c *checkout) Scan(SKU string) error {
+	c.items = append(c.items, SKU)
+	return nil
 }
 
-func (c *Checkout) GetTotalPrice() (int, error) {
+func (c *checkout) GetTotalPrice() (int, error) {
 	panic("not implemented")
 }
