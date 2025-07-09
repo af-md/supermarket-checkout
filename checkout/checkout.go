@@ -65,14 +65,12 @@ func (c *checkout) GetTotalPrice() (int, error) {
 		}
 
 		if quantity >= pricingRules.DiscountThreshold {
-			remainingItems := quantity % pricingRules.DiscountThreshold
-			discountedItems := quantity - remainingItems
-			totalPrice += (discountedItems / pricingRules.DiscountThreshold) * pricingRules.DiscountPrice
+			discountGroups := quantity / pricingRules.DiscountThreshold
+			itemsAfterDiscount := quantity % pricingRules.DiscountThreshold
 
-			quantity -= discountedItems
-		}
-
-		if quantity < pricingRules.DiscountThreshold && quantity > 0 {
+			totalPrice += discountGroups * pricingRules.DiscountPrice
+			totalPrice += itemsAfterDiscount * pricingRules.Price
+		} else {
 			totalPrice += quantity * pricingRules.Price
 		}
 	}
